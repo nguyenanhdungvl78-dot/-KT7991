@@ -1,0 +1,6 @@
+{
+  "name": "Tạo Ma Trận Đề Kiểm Tra",
+  "description": "Ứng dụng tự động phân tích và tạo ma trận, bản đặc tả đề kiểm tra cho giáo viên.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
