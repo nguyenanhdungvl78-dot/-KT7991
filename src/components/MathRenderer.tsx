@@ -56,7 +56,7 @@ export default function MathRenderer({ content = '', className = '', inline = fa
 
   return (
     <div
-      className={`math-content ${className}`}
+      className={`math-content whitespace-pre-line ${className}`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

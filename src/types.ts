@@ -9,12 +9,22 @@ export interface Chapter {
   lessons: Lesson[];
 }
 
+export interface ManualLevelCounts {
+  knowledge: number;
+  comprehension: number;
+  application: number;
+  highApplication: number;
+}
+
 export interface QuestionType {
   id: string;
   name: string;
   quantity: number;
   points: number;
+  manualLevels?: ManualLevelCounts;
 }
+
+export type QuestionTypeConfig = QuestionType;
 
 export interface CognitiveLevels {
   knowledge: number;
@@ -23,15 +33,26 @@ export interface CognitiveLevels {
   highApplication: number;
 }
 
+export type CognitiveLevelConfig = CognitiveLevels;
+
+export interface GradingStep {
+  part: string;
+  content: string;
+  points: string;
+}
+
 export interface ExamQuestion {
   id: string;
   type: 'multipleChoice' | 'trueFalse' | 'shortAnswer' | 'essay';
   level: string;
   topic: string;
+  requirement?: string;
+  points?: number | string;
   content: string;
   options?: string[]; // Used for multiple choice and true-false
   answer: any;
   explanation: string;
+  gradingSteps?: GradingStep[];
 }
 
 export interface ExamData {

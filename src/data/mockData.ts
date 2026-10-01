@@ -243,10 +243,34 @@ export const curriculumData: Record<string, Chapter[]> = {
 export const chaptersData: Chapter[] = curriculumData['Lớp 6'];
 
 export const initialQuestionTypes: QuestionType[] = [
-  { id: 'trac_nghiem', name: 'Trắc nghiệm', quantity: 12, points: 3 },
-  { id: 'dung_sai', name: 'Đúng/Sai', quantity: 4, points: 4 },
-  { id: 'tra_loi_ngan', name: 'Trả lời ngắn', quantity: 6, points: 3 },
-  { id: 'tu_luan', name: 'Tự luận', quantity: 1, points: 0 },
+  {
+    id: 'trac_nghiem',
+    name: 'Trắc nghiệm',
+    quantity: 12,
+    points: 3,
+    manualLevels: { knowledge: 5, comprehension: 4, application: 2, highApplication: 1 },
+  },
+  {
+    id: 'dung_sai',
+    name: 'Đúng/Sai',
+    quantity: 4,
+    points: 4,
+    manualLevels: { knowledge: 2, comprehension: 1, application: 1, highApplication: 0 },
+  },
+  {
+    id: 'tra_loi_ngan',
+    name: 'Trả lời ngắn',
+    quantity: 6,
+    points: 3,
+    manualLevels: { knowledge: 2, comprehension: 2, application: 1, highApplication: 1 },
+  },
+  {
+    id: 'tu_luan',
+    name: 'Tự luận',
+    quantity: 1,
+    points: 0,
+    manualLevels: { knowledge: 0, comprehension: 0, application: 0, highApplication: 1 },
+  },
 ];
 
 export const initialCognitiveLevels: CognitiveLevels = {
