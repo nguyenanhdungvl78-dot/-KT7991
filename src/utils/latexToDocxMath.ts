@@ -778,10 +778,13 @@ function tokenizeTextAndMath(rawInput: string): Array<{ type: 'text' | 'math'; v
   return finalTokens;
 }
 
+export type WordMathMode = 'equation' | 'latex' | 'unicode' | boolean;
+
 /**
- * Converts a string containing mixed Vietnamese text and `$...$` LaTeX formulas into
- * an array of `ParagraphChild` (`TextRun` + native Word `DocxMath` Equation objects)
- * when `useEquation = true`, or clean Unicode `TextRun` when `useEquation = false`.
+ * Converts a string containing mixed Vietnamese text and `$...$` LaTeX formulas into:
+ * - `'equation'` (or `true`): `TextRun` + native Word `DocxMath` Equation (`<m:oMath>`) objects
+ * - `'latex'`: `TextRun` preserving `$ ... $` LaTeX syntax inside Word (for MathType Alt+\, TexSword, McMix)
+ * - `'unicode'` (or `false`): readable Unicode `TextRun`
  */
 export function createRichRunsWithEquation(
   text: string,
@@ -791,10 +794,17 @@ export function createRichRunsWithEquation(
     size?: number;
     color?: string;
     font?: string;
-    useEquation?: boolean;
+    useEquation?: WordMathMode;
   }
 ): ParagraphChild[] {
-  const useEquation = options?.useEquation ?? true;
+  const rawMode = options?.useEquation ?? 'equation';
+  const mathMode: 'equation' | 'latex' | 'unicode' =
+    rawMode === true
+      ? 'equation'
+      : rawMode === false
+      ? 'unicode'
+      : rawMode;
+
   const font = options?.font ?? 'Times New Roman';
   const size = options?.size ?? 26;
 
@@ -805,10 +815,22 @@ export function createRichRunsWithEquation(
 
   for (const tok of tokens) {
     if (tok.type === 'math') {
-      if (useEquation) {
+      if (mathMode === 'equation') {
         children.push(createWordEquationFromLatex(tok.value));
+      } else if (mathMode === 'latex') {
+        const cleanMath = tok.value.trim().replace(/^\$+|\$+$/g, '').trim();
+        children.push(
+          new TextRun({
+            text: `$${cleanMath}$`,
+            font,
+            size,
+            bold: options?.bold,
+            italics: options?.italics,
+            color: options?.color,
+          })
+        );
       } else {
-        // Fallback readable Unicode math if useEquation is false
+        // Fallback readable Unicode math
         children.push(
           new TextRun({
             text: latexToReadableUnicode(tok.value),

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from './MathRenderer';
 import { exportMatrixAndSpecToWord } from '../utils/exportWord';
+import { WordMathMode } from '../utils/latexToDocxMath';
 import {
   MatrixRow,
   SpecRow,
@@ -269,14 +270,16 @@ export default function MatrixResult({
   const displayMatrix = liveCalc.matrix;
   const totals = liveCalc.totals || propTotals;
 
-  const handleExport = async (mode: 'all' | 'matrix' | 'spec') => {
+  const handleExport = async (
+    mode: 'all' | 'matrix' | 'spec',
+    mathMode: WordMathMode = 'equation'
+  ) => {
     try {
       setIsExporting(true);
       setShowExportMenu(false);
-      await exportMatrixAndSpecToWord(displayMatrix, specification, totals, grade, mode);
+      await exportMatrixAndSpecToWord(displayMatrix, specification, totals, grade, mode, mathMode);
     } catch (error) {
       console.error('Lỗi khi xuất Word:', error);
-      alert('Đã xảy ra lỗi khi tạo file Word. Vui lòng thử lại.');
     } finally {
       setIsExporting(false);
     }
@@ -478,35 +481,59 @@ export default function MatrixResult({
             {showExportMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 mt-1.5 w-68 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 text-sm">
+                <div className="absolute right-0 mt-1.5 w-76 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 text-sm">
                   <div className="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Định dạng Word Equation (.docx)
+                    Word Equation (.docx)
                   </div>
                   <button
-                    onClick={() => handleExport('all')}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center justify-between text-slate-700 font-medium"
+                    onClick={() => handleExport('all', 'equation')}
+                    className="w-full text-left px-3.5 py-2 hover:bg-blue-50 flex items-center justify-between text-slate-800 font-semibold"
                   >
                     <span className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-blue-600" />
                       Cả Ma trận & Đặc tả (Equation)
                     </span>
                     <span className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
-                      Chuẩn
+                      Equation
                     </span>
                   </button>
                   <button
-                    onClick={() => handleExport('matrix')}
+                    onClick={() => handleExport('matrix', 'equation')}
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
                   >
                     <FileText className="w-4 h-4 text-slate-500" />
                     Chỉ Khung Ma trận (Equation)
                   </button>
                   <button
-                    onClick={() => handleExport('spec')}
+                    onClick={() => handleExport('spec', 'equation')}
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
                   >
                     <FileText className="w-4 h-4 text-slate-500" />
                     Chỉ Bản Đặc tả (Equation)
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100" />
+                  <div className="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Word Dạng LaTeX $...$ (.docx)
+                  </div>
+                  <button
+                    onClick={() => handleExport('all', 'latex')}
+                    className="w-full text-left px-3.5 py-2 hover:bg-indigo-50 flex items-center justify-between text-slate-800 font-semibold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-indigo-600" />
+                      Cả Ma trận & Đặc tả (LaTeX)
+                    </span>
+                    <span className="text-[11px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
+                      $...$
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('spec', 'latex')}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                  >
+                    <Code className="w-4 h-4 text-slate-500" />
+                    Chỉ Bản Đặc tả (LaTeX)
                   </button>
                 </div>
               </>
@@ -514,11 +541,13 @@ export default function MatrixResult({
           </div>
 
           <button
-            onClick={() => alert('Chức năng xuất LaTeX đang được phát triển')}
-            className="bg-[#374151] hover:bg-[#1f2937] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+            onClick={() => handleExport('all', 'latex')}
+            disabled={isExporting}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-75 text-white px-3.5 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-1.5"
+            title="Xuất cả Ma trận & Bản đặc tả sang Word (.docx) giữ nguyên mã công thức LaTeX $...$"
           >
             <Code className="w-4 h-4" />
-            Xuất LaTeX
+            Xuất Word (LaTeX)
           </button>
         </div>
       </div>

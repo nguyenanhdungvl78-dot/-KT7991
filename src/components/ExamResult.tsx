@@ -1,9 +1,10 @@
 import { useState, Fragment } from 'react';
 import { ExamData, ExamQuestion } from '../types';
 import MathRenderer from './MathRenderer';
-import { exportExamToWord } from '../utils/exportWord';
+import { exportExamToWord, exportExamToLatexFile } from '../utils/exportWord';
+import { WordMathMode } from '../utils/latexToDocxMath';
 import { formatAnswerString, formatShortAnswer, parseMultipleChoiceAnswer, parseTrueFalseAnswers } from '../utils/answerUtils';
-import { FileDown, Printer, ArrowLeft, BookOpenCheck, ChevronDown, Sigma } from 'lucide-react';
+import { FileDown, Printer, ArrowLeft, BookOpenCheck, ChevronDown, Sigma, Code } from 'lucide-react';
 
 interface ExamResultProps {
   exam: ExamData;
@@ -16,19 +17,27 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const handleExportWord = async (useEquation: boolean = true) => {
+  const handleExportWord = async (mode: WordMathMode = 'equation') => {
     try {
       setIsExporting(true);
       setShowExportMenu(false);
-      const fileTitle = useEquation
-        ? 'De_Kiem_Tra_Toan_Equation'
-        : 'De_Kiem_Tra_Toan_Unicode';
-      await exportExamToWord(exam, fileTitle, useEquation);
+      const fileTitle =
+        mode === 'latex'
+          ? 'De_Kiem_Tra_Toan_LaTeX'
+          : mode === true || mode === 'equation'
+          ? 'De_Kiem_Tra_Toan_Equation'
+          : 'De_Kiem_Tra_Toan_Unicode';
+      await exportExamToWord(exam, fileTitle, mode);
     } catch (err) {
       console.error('Lỗi xuất file Word:', err);
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleExportLatexFile = () => {
+    setShowExportMenu(false);
+    exportExamToLatexFile(exam, 'De_Kiem_Tra_Toan_LaTeX');
   };
 
   // Helper to get letter from index (0 -> A, 1 -> B)
@@ -132,10 +141,20 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
             <span className="hidden sm:inline">Quay lại</span> Ma Trận
           </button>
 
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
+            <button
+              onClick={() => handleExportWord('latex')}
+              disabled={isExporting}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
+              title="Xuất file Word (.docx) giữ nguyên mã công thức LaTeX $...$ (dùng cho MathType Alt+\, McMix, SmartTest)"
+            >
+              <Code className="w-4 h-4" />
+              {isExporting ? 'Đang xuất...' : 'Xuất Word (LaTeX)'}
+            </button>
+
             <div className="flex rounded-lg shadow-sm">
               <button
-                onClick={() => handleExportWord(true)}
+                onClick={() => handleExportWord('equation')}
                 disabled={isExporting}
                 className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3.5 py-2 rounded-l-lg text-sm font-semibold transition-colors flex items-center gap-2"
                 title="Xuất toàn bộ Đề thi và Hướng dẫn chấm sang Word (.docx) với công thức toán dạng Equation chỉnh sửa được"
@@ -148,7 +167,7 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 disabled={isExporting}
                 className="bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white px-2 py-2 rounded-r-lg border-l border-blue-500 transition-colors flex items-center justify-center"
-                title="Tùy chọn định dạng xuất Word"
+                title="Tùy chọn định dạng xuất Word & LaTeX"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -160,16 +179,16 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
                   className="fixed inset-0 z-40"
                   onClick={() => setShowExportMenu(false)}
                 />
-                <div className="absolute right-0 mt-1.5 w-72 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 text-sm">
+                <div className="absolute right-0 top-full mt-1.5 w-80 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 text-sm">
                   <div className="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Chế độ xuất Word (.docx)
+                    Chế độ xuất Word (.docx) & LaTeX
                   </div>
                   <button
-                    onClick={() => handleExportWord(true)}
+                    onClick={() => handleExportWord('equation')}
                     className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 flex items-center justify-between text-slate-800 font-semibold"
                   >
                     <span className="flex items-center gap-2">
-                      <Sigma className="w-4 h-4 text-blue-600" />
+                      <Sigma className="w-4 h-4 text-blue-600 shrink-0" />
                       <span>
                         Word (Equation)
                         <span className="block text-[11px] font-normal text-slate-500">
@@ -178,11 +197,28 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
                       </span>
                     </span>
                     <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold shrink-0">
-                      Chuẩn
+                      Equation
                     </span>
                   </button>
                   <button
-                    onClick={() => handleExportWord(false)}
+                    onClick={() => handleExportWord('latex')}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-indigo-50 flex items-center justify-between text-slate-800 font-semibold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span>
+                        Word (Dạng LaTeX $...$)
+                        <span className="block text-[11px] font-normal text-slate-500">
+                          File .docx giữ mã $...$ (MathType Alt+\, McMix)
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold shrink-0">
+                      LaTeX .docx
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleExportWord('unicode')}
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
                   >
                     <FileDown className="w-4 h-4 text-slate-500 shrink-0" />
@@ -190,6 +226,19 @@ export default function ExamResult({ exam, onBack }: ExamResultProps) {
                       Word (Văn bản Unicode)
                       <span className="block text-[11px] font-normal text-slate-500">
                         Công thức dạng ký tự văn bản thuần
+                      </span>
+                    </span>
+                  </button>
+                  <div className="my-1 border-t border-slate-100" />
+                  <button
+                    onClick={handleExportLatexFile}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                  >
+                    <Code className="w-4 h-4 text-slate-600 shrink-0" />
+                    <span>
+                      Xuất mã nguồn LaTeX (.tex)
+                      <span className="block text-[11px] font-normal text-slate-500">
+                        File .tex chuẩn dùng cho Overleaf / TeXstudio
                       </span>
                     </span>
                   </button>

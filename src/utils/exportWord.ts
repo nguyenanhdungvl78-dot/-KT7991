@@ -20,7 +20,7 @@ import {
   parseMultipleChoiceAnswer,
   parseTrueFalseAnswers,
 } from './answerUtils';
-import { createRichRunsWithEquation } from './latexToDocxMath';
+import { createRichRunsWithEquation, WordMathMode } from './latexToDocxMath';
 
 /**
  * Strips valid HTML tags while preserving math inequalities (<, >) and line breaks.
@@ -45,7 +45,7 @@ function createParagraphsFromText(
     italic?: boolean;
     size?: number;
     color?: string;
-    useEquation?: boolean;
+    useEquation?: WordMathMode;
     prefix?: string;
     prefixBold?: boolean;
   }
@@ -53,7 +53,7 @@ function createParagraphsFromText(
   const cleaned = cleanText(text);
   const lines = cleaned ? cleaned.split('\n') : [''];
   const size = options?.size ?? 26; // 13pt
-  const useEquation = options?.useEquation ?? true;
+  const useEquation = options?.useEquation ?? 'equation';
 
   return lines.map((line, idx) => {
     const prefixRuns =
@@ -98,7 +98,7 @@ const tableBorders = {
 export async function exportExamToWord(
   exam: ExamData,
   title: string = 'De_Kiem_Tra_Toan',
-  useEquation: boolean = true
+  useEquation: WordMathMode = 'equation'
 ) {
   const multipleChoiceQs = exam.questions.filter((q) => q.type === 'multipleChoice');
   const trueFalseQs = exam.questions.filter((q) => q.type === 'trueFalse');
@@ -1242,7 +1242,7 @@ export async function exportMatrixAndSpecToWord(
   totals?: MatrixTotals,
   grade: string = 'Lớp 6',
   mode: 'all' | 'matrix' | 'spec' = 'all',
-  useEquation: boolean = true
+  useEquation: WordMathMode = 'equation'
 ) {
   const docChildren: any[] = [];
   const headerBg = 'F1F5F9';
@@ -2558,7 +2558,12 @@ export async function exportMatrixAndSpecToWord(
     ],
   });
 
-  const eqSuffix = useEquation ? '_Equation' : '';
+  const eqSuffix =
+    useEquation === 'latex'
+      ? '_LaTeX'
+      : useEquation === true || useEquation === 'equation'
+      ? '_Equation'
+      : '_Unicode';
   let fileName = `Ma_Tran_Va_Ban_Dac_Ta_Toan_${grade.replace(/\s+/g, '_')}${eqSuffix}`;
   if (mode === 'matrix') {
     fileName = `Khung_Ma_Tran_Toan_${grade.replace(/\s+/g, '_')}${eqSuffix}`;
@@ -2569,3 +2574,104 @@ export async function exportMatrixAndSpecToWord(
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `${fileName}.docx`);
 }
+
+/**
+ * Exports Exam + Answer Key to a standard .tex LaTeX file
+ */
+export function exportExamToLatexFile(exam: ExamData, title: string = 'De_Kiem_Tra_Toan') {
+  const multipleChoiceQs = exam.questions.filter((q) => q.type === 'multipleChoice');
+  const trueFalseQs = exam.questions.filter((q) => q.type === 'trueFalse');
+  const shortAnswerQs = exam.questions.filter((q) => q.type === 'shortAnswer');
+  const essayQs = exam.questions.filter((q) => q.type === 'essay');
+  const getLetter = (index: number) => String.fromCharCode(65 + index);
+
+  const lines: string[] = [
+    '\\documentclass[12pt,a4paper]{article}',
+    '\\usepackage[utf8]{vietnam}',
+    '\\usepackage{amsmath,amssymb,amsfonts}',
+    '\\usepackage[top=2cm,bottom=2cm,left=2cm,right=1.5cm]{geometry}',
+    '\\usepackage{enumitem}',
+    '\\begin{document}',
+    '\\begin{center}',
+    '\\textbf{ĐỀ KIỂM TRA ĐỊNH KỲ MÔN TOÁN}\\\\',
+    '\\textit{Thời gian làm bài: 90 phút}',
+    '\\end{center}',
+    '\\vspace{0.3cm}',
+    '',
+  ];
+
+  if (multipleChoiceQs.length > 0) {
+    lines.push('\\section*{PHẦN 1. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN}');
+    multipleChoiceQs.forEach((q, idx) => {
+      lines.push(`\\noindent\\textbf{Câu ${idx + 1}.} ${cleanText(q.content)}`);
+      if (q.options && q.options.length > 0) {
+        lines.push('\\begin{itemize}[label={},leftmargin=1.2cm,itemsep=2pt]');
+        q.options.forEach((opt, oIdx) => {
+          const cleanOpt = cleanText(opt).replace(/^[A-Da-d][.)]\\s*/, '');
+          lines.push(`  \\item \\textbf{${getLetter(oIdx)}.} ${cleanOpt}`);
+        });
+        lines.push('\\end{itemize}');
+      }
+      lines.push('');
+    });
+  }
+
+  if (trueFalseQs.length > 0) {
+    lines.push('\\section*{PHẦN 2. CÂU TRẮC NGHIỆM ĐÚNG - SAI}');
+    trueFalseQs.forEach((q, idx) => {
+      lines.push(`\\noindent\\textbf{Câu ${idx + 1}.} ${cleanText(q.content)}`);
+      if (q.options && q.options.length > 0) {
+        lines.push('\\begin{itemize}[label={},leftmargin=1.2cm,itemsep=2pt]');
+        q.options.forEach((opt, oIdx) => {
+          const cleanOpt = cleanText(opt)
+            .replace(/^[A-Da-d][.)]\\s*/, '')
+            .replace(/^[a-d][.)]\\s*/, '');
+          lines.push(`  \\item \\textbf{${getLetter(oIdx).toLowerCase()})} ${cleanOpt}`);
+        });
+        lines.push('\\end{itemize}');
+      }
+      lines.push('');
+    });
+  }
+
+  if (shortAnswerQs.length > 0) {
+    lines.push('\\section*{PHẦN 3. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN}');
+    shortAnswerQs.forEach((q, idx) => {
+      lines.push(`\\noindent\\textbf{Câu ${idx + 1}.} ${cleanText(q.content)}`);
+      lines.push('');
+    });
+  }
+
+  if (essayQs.length > 0) {
+    lines.push('\\section*{PHẦN 4. TỰ LUẬN}');
+    essayQs.forEach((q, idx) => {
+      const pts = q.points ? ` (${q.points})` : '';
+      lines.push(`\\noindent\\textbf{Câu ${idx + 1}${pts}.} ${cleanText(q.content)}`);
+      lines.push('');
+    });
+  }
+
+  lines.push('\\newpage');
+  lines.push('\\begin{center}\\textbf{ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM CHI TIẾT}\\end{center}');
+
+  exam.questions.forEach((q, idx) => {
+    lines.push(`\\noindent\\textbf{Câu ${idx + 1}.} Đáp án: ${cleanText(q.answer)}\\\\`);
+    if (q.explanation) {
+      lines.push(`Lời giải: ${cleanText(q.explanation)}`);
+    }
+    if (Array.isArray(q.gradingSteps) && q.gradingSteps.length > 0) {
+      lines.push('\\begin{itemize}[leftmargin=1cm]');
+      q.gradingSteps.forEach((st) => {
+        lines.push(`  \\item \\textbf{${cleanText(st.part)} (${cleanText(st.points)}):} ${cleanText(st.content)}`);
+      });
+      lines.push('\\end{itemize}');
+    }
+    lines.push('');
+  });
+
+  lines.push('\\end{document}');
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  saveAs(blob, `${title}.tex`);
+}
+
